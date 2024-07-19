@@ -1,0 +1,32 @@
+- name: Deploy Docker image to Ubuntu host
+  hosts: ubuntu_hosts
+  become: yes  # Necessary to have root privileges
+
+  tasks:
+    - name: Transfer Docker image tar file to target host
+      ansible.builtin.copy:
+        src: my_vcx.tar
+        dest: /tmp/my_vcx.tar
+
+    - name: Import Docker image on target host
+      ansible.builtin.shell: docker import /tmp/my_vcx.tar my_vcx
+      args:
+        chdir: /tmp/
+
+    - name: Run Docker container VCX
+      ansible.builtin.shell: >
+        docker run -v /etc/localtime:/etc/localtime:ro -d --net=host --restart=always -tid --name VCX --privileged=true my_vcx /sbin/init
+
+    - name: Run Docker container VCX1
+      ansible.builtin.shell: >
+        docker run -v /etc/localtime:/etc/localtime:ro -d --net=host --restart=always -tid --name VCX1 --privileged=true my_vcx /sbin/init
+
+    - name: Update .env file in VCX1 container
+      ansible.builtin.shell: >
+        docker exec VCX1 sh -c "sed -i 's/^PORT=.*$/PORT=4080/' /home/VCX_Server_New/.env"
+
+    - name: Restart Docker container VCX1
+      ansible.builtin.shell: docker restart VCX1
+
+
+
